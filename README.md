@@ -4,14 +4,14 @@
 Another two implementations for the Differential Transformer paper [[1]](#citation) using PyTorch's
 [Scaled Dot Product Attention](https://pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html) instead
 of the provided implementations [over here](https://github.com/microsoft/unilm/tree/master/Diff-Transformer): 
+- Basic manual PyTorch
 - Flash Attention 2 
   - Custom kernel to handle differing `head_dim` more efficiently
   - Original kernel that is more optimized on same `head_dim`
-- Basic manual PyTorch
 
 This implementation has two variations as I explored:
-- One forward pass to the attention calculations (transferable to Flash Attention 2 implementation)
 - Following the original Flash Attention 2 implementation more closely
+- One forward pass to the attention calculations (transferable to Flash Attention 2 implementation)
 
 Note:
 - RoPE is optional as I only cared about equivalency first and foremost
@@ -22,8 +22,8 @@ Note:
 ```python
 import torch
 
-from multihead_sdpadiff_1 import MultiheadSdpaDiff1
-from multihead_sdpadiff_2 import MultiheadSdpaDiff2
+from multihead_sdpadiff_1 import MultiheadSdpaDiff1  # multiple attn passes
+from multihead_sdpadiff_2 import MultiheadSdpaDiff2  # one attn pass
 
 # some shape values
 bsz = 2
