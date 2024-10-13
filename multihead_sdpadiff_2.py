@@ -53,9 +53,6 @@ def repeat_and_stack_attn_heads(qkv, strategy='repeat'):
     else:
         raise ValueError(f'Requested strategy {strategy} is not supported!')
 
-def shape_for_partial_sdpa(qkv, part):
-    return qkv[:, :, :, part].transpose(1, 2).contiguous()
-
 def lambda_init_fn(depth):
     return 0.8 - 0.6 * math.exp(-0.3 * depth)
 

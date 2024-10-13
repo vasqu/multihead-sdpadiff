@@ -23,36 +23,6 @@ def repeat_kv(x: torch.Tensor, n_rep: int) -> torch.Tensor:
         .transpose(1, 2)
     )
 
-def repeat_and_stack_attn_heads(qkv, strategy='repeat'):
-    bsz, seq_len, num_heads, _, head_dim = qkv.shape
-
-    # repeat along to duplicate heads and split into each separate one
-    qkv = qkv.repeat(1, 1, 1, 2, 1).contiguous()
-    qkv = qkv.view(bsz, seq_len, num_heads, 4, head_dim)
-    qkv_11, qkv_12, qkv_21, qkv_22 = torch.unbind(qkv, dim=-2)
-
-    # head pattern based repetition (2 separate heads, repeated twice each)
-    # repeat == 1,2,1,2
-    if strategy == 'repeat':
-        return (
-            torch.cat(
-                (qkv_11, qkv_12, qkv_21, qkv_22),
-                dim=-2)
-            .transpose(1, 2)
-            .contiguous()
-        )
-    # repeat == 1,1,2,2
-    elif strategy == 'interleave':
-        return (
-            torch.cat(
-                (qkv_11, qkv_21, qkv_12, qkv_22),
-                dim=-2)
-            .transpose(1, 2)
-            .contiguous()
-        )
-    else:
-        raise ValueError(f'Requested strategy {strategy} is not supported!')
-
 def shape_for_partial_sdpa(qkv, part):
     return qkv[:, :, :, part].transpose(1, 2).contiguous()
 
@@ -63,6 +33,7 @@ def lambda_init_fn(depth):
 class MultiheadSdpaDiff1(nn.Module):
     """
     DiffAttn implemented with SDPA Attention, using the original intended attention passes
+    @ https://github.com/microsoft/unilm/blob/master/Diff-Transformer/multihead_flashdiff_2.py
     """
     def __init__(
         self,
