@@ -22,35 +22,8 @@ def repeat_kv(x: torch.Tensor, n_rep: int) -> torch.Tensor:
         .reshape(bsz, seq_len, n_kv_heads * n_rep, head_dim)
     )
 
-def repeat_and_stack_attn_heads(qkv, strategy='repeat'):
-    bsz, seq_len, num_heads, _, head_dim = qkv.shape
-
-    # repeat along to duplicate heads and split into each separate one
-    qkv = qkv.repeat(1, 1, 1, 2, 1).contiguous()
-    qkv = qkv.view(bsz, seq_len, num_heads, 4, head_dim)
-    qkv_11, qkv_12, qkv_21, qkv_22 = torch.unbind(qkv, dim=-2)
-
-    # head pattern based repetition (2 separate heads, repeated twice each)
-    # repeat == 1,2,1,2
-    if strategy == 'repeat':
-        return (
-            torch.cat(
-                (qkv_11, qkv_12, qkv_21, qkv_22),
-                dim=-2)
-            .transpose(1, 2)
-            .contiguous()
-        )
-    # interleave == 1,1,2,2
-    elif strategy == 'interleave':
-        return (
-            torch.cat(
-                (qkv_11, qkv_21, qkv_12, qkv_22),
-                dim=-2)
-            .transpose(1, 2)
-            .contiguous()
-        )
-    else:
-        raise ValueError(f'Requested strategy {strategy} is not supported!')
+def shape_for_partial_sdpa(qkv, part):
+    return qkv[:, :, :, part].transpose(1, 2).contiguous()
 
 def lambda_init_fn(depth):
     return 0.8 - 0.6 * math.exp(-0.3 * depth)
@@ -58,7 +31,8 @@ def lambda_init_fn(depth):
 
 class MultiheadSdpaDiff2(nn.Module):
     """
-    DiffAttn implemented with SDPA Attention, using one attention pass but more concatenating and chunking/unbinding
+    DiffAttn implemented with SDPA Attention, using the original intended attention passes
+    @ https://github.com/microsoft/unilm/blob/master/Diff-Transformer/multihead_flashdiff_1.py
     """
     def __init__(
         self,
@@ -117,22 +91,21 @@ class MultiheadSdpaDiff2(nn.Module):
 
         q = q.reshape(bsz, tgt_len, self.num_heads, 2, self.head_dim)
         k = k.reshape(bsz, src_len, self.num_heads, 2, self.head_dim)
-        v = v.reshape(bsz, src_len, self.num_heads, 2, self.head_dim)
 
-        # [bsz, num_heads*4, seq_len, head_dim]
-        q = repeat_and_stack_attn_heads(q, strategy='interleave')
-        k = repeat_and_stack_attn_heads(k, strategy='interleave')
-        v = repeat_and_stack_attn_heads(v, strategy='repeat')
+        # [bsz, num_heads, seq_len, head_dim]
+        q1, q2 = shape_for_partial_sdpa(q, 0), shape_for_partial_sdpa(q, 1)
+        k1, k2 = shape_for_partial_sdpa(k, 0), shape_for_partial_sdpa(k, 1)
+
+        # [bsz, num_heads, seq_len, head_dim*2]
+        v = v.reshape(bsz, src_len, self.num_heads, self.head_dim*2).transpose(1, 2).contiguous()
 
         if attn_mask is not None:
             attn_mask = attn_mask[:, :, :, : src_len.shape[-2]]
         is_causal = True if attn_mask is None and tgt_len > 1 else False
 
-        # pass into one attn with appropriate heads and reconstruct correct diff attn scores
-        attn1122 = sdpa_attn_function(q, k, v, attn_mask=attn_mask, is_causal=is_causal)
-        attn11, attn12, attn21, attn22 = attn1122.chunk(4, dim=1)
-        attn1 = torch.cat((attn11, attn12), dim=-1)
-        attn2 = torch.cat((attn21, attn22), dim=-1)
+        # pass into two attn with appropriate heads+dims --> total attns for the diff
+        attn1 = sdpa_attn_function(q1, k1, v, attn_mask=attn_mask, is_causal=is_causal)
+        attn2 = sdpa_attn_function(q2, k2, v, attn_mask=attn_mask, is_causal=is_causal)
 
         lambda_1 = torch.exp(torch.sum(self.lambda_q1 * self.lambda_k1, dim=-1).float()).type_as(q)
         lambda_2 = torch.exp(torch.sum(self.lambda_q2 * self.lambda_k2, dim=-1).float()).type_as(q)

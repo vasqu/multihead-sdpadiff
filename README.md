@@ -11,6 +11,7 @@ of the provided implementations [over here](https://github.com/microsoft/unilm/t
 
 This implementation has two variations as I explored:
 - Following the original Flash Attention 2 implementation more closely
+- Following the custom Flash Attention 2 implementation more closely
 - One forward pass to the attention calculations (transferable to Flash Attention 2 implementation)
 
 Note:
@@ -23,7 +24,8 @@ Note:
 import torch
 
 from multihead_sdpadiff_1 import MultiheadSdpaDiff1  # multiple attn passes
-from multihead_sdpadiff_2 import MultiheadSdpaDiff2  # one attn pass
+from multihead_sdpadiff_2 import MultiheadSdpaDiff2  # two attn passes
+from multihead_sdpadiff_3 import MultiheadSdpaDiff3  # one attn pass
 
 # some shape values
 bsz = 2
@@ -37,7 +39,8 @@ x = torch.randn(size=(bsz, seq_len, embed_dim))
 
 # choose an implementation
 #sdpa_mha_diff = MultiheadSdpaDiff1(embed_dim, depth, num_heads, num_heads)
-sdpa_mha_diff = MultiheadSdpaDiff2(embed_dim, depth, num_heads, num_heads)
+#sdpa_mha_diff = MultiheadSdpaDiff2(embed_dim, depth, num_heads, num_heads)
+sdpa_mha_diff = MultiheadSdpaDiff3(embed_dim, depth, num_heads, num_heads)
 
 # pass and check
 res = sdpa_mha_diff(x)
