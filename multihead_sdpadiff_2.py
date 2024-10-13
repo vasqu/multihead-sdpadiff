@@ -40,7 +40,7 @@ def repeat_and_stack_attn_heads(qkv, strategy='repeat'):
             .transpose(1, 2)
             .contiguous()
         )
-    # repeat == 1,1,2,2
+    # interleave == 1,1,2,2
     elif strategy == 'interleave':
         return (
             torch.cat(
