@@ -21,7 +21,7 @@ Note:
 - It really needs benchmarks to see what is working better especially regarding both 
 one pass versions 
   - Same `head_dim`, more `num_heads` but concatenating and chunking/unbinding
-  - Different `head_dim`, less `num_heads` but possibly less utilization on Flash Attention 2
+  - Different `head_dim`, less `num_heads` but possibly less utilization on original Flash Attention 2
 
 
 ## Usage
