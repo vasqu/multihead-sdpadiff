@@ -17,10 +17,9 @@ def repeat_kv(x: torch.Tensor, n_rep: int) -> torch.Tensor:
     if n_rep == 1:
         return x
     return (
-        x.transpose(1, 2)[:, :, None, :, :]
-        .expand(bsz, n_kv_heads, n_rep, seq_len, head_dim)
-        .reshape(bsz, n_kv_heads * n_rep, seq_len, head_dim)
-        .transpose(1, 2)
+        x[:, :, :, None, :]
+        .expand(bsz, seq_len, n_kv_heads, n_rep, head_dim)
+        .reshape(bsz, seq_len, n_kv_heads * n_rep, head_dim)
     )
 
 def repeat_and_stack_attn_heads(qkv, strategy='repeat'):
