@@ -3,7 +3,7 @@
 ## Introduction
 A set of implementations for the Differential Transformer paper [[1]](#citation) using PyTorch's
 [Scaled Dot Product Attention](https://pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html) instead
-of the provided implementations [over here](https://github.com/microsoft/unilm/tree/master/Diff-Transformer): 
+of the provided implementations [over there](https://github.com/microsoft/unilm/tree/master/Diff-Transformer): 
 - Basic manual PyTorch
 - Flash Attention 2 
   - Custom kernel to handle differing `head_dim` more efficiently
