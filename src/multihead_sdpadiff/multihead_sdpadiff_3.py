@@ -4,8 +4,8 @@ import torch
 import torch.nn as nn
 from torch.nn.functional import scaled_dot_product_attention as sdpa_attn_function
 
-from rotary import apply_rotary_emb
-from rms_norm import RMSNorm
+from .utils.rotary import apply_rotary_emb
+from .utils.rms_norm import RMSNorm
 
 
 def init_method(tensor, **kwargs):
