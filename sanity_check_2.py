@@ -1,9 +1,11 @@
 import torch
 
-from multihead_sdpadiff_1 import MultiheadSdpaDiff1
-from multihead_sdpadiff_2 import MultiheadSdpaDiff2
-from multihead_sdpadiff_3 import MultiheadSdpaDiff3
-from multihead_sdpadiff_4 import MultiheadSdpaDiff4
+from multihead_sdpadiff import (
+    MultiheadSdpaDiff1,
+    MultiheadSdpaDiff2,
+    MultiheadSdpaDiff3,
+    MultiheadSdpaDiff4,
+)
 
 
 def clone_params(mha_1, mha_2):

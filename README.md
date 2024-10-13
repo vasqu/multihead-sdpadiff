@@ -24,14 +24,25 @@ one pass versions
   - Different `head_dim`, less `num_heads` but possibly less utilization on original Flash Attention 2
 
 
+## Installation
+I won't distribute a pypi package, but you can use it as package by cloning the repo and installing it at root:
+```bash
+git clone https://github.com/vasqu/multihead-sdpadiff.git
+cd multihead-sdpadiff
+pip install .
+```
+
+
 ## Usage
 ```python
 import torch
 
-from multihead_sdpadiff_1 import MultiheadSdpaDiff1  # multiple attn passes
-from multihead_sdpadiff_2 import MultiheadSdpaDiff2  # two attn passes
-from multihead_sdpadiff_3 import MultiheadSdpaDiff3  # one attn pass (v1)
-from multihead_sdpadiff_4 import MultiheadSdpaDiff4  # one attn pass (v2)
+from multihead_sdpadiff import (
+  MultiheadSdpaDiff1,  # multiple attn passes
+  MultiheadSdpaDiff2,  # two attn passes
+  MultiheadSdpaDiff3,  # one attn pass (v1)
+  MultiheadSdpaDiff4,  # one attn pass (v2)
+)
 
 # some shape values
 bsz = 2
@@ -56,7 +67,7 @@ assert res.shape == x.shape
 
 
 ## TODOs
-- [ ] Make it a package structure
+- [x] Make it a package structure
 - [ ] Benchmark the speed/memory between the implementations
 - [ ] Transformer style RoPE + Attn Mask
 
