@@ -22,17 +22,16 @@ def repeat_kv(x: torch.Tensor, n_rep: int) -> torch.Tensor:
         .reshape(bsz, seq_len, n_kv_heads * n_rep, head_dim)
     )
 
-def shape_for_partial_sdpa(qkv, part):
-    return qkv[:, :, :, part].transpose(1, 2).contiguous()
-
 def lambda_init_fn(depth):
     return 0.8 - 0.6 * math.exp(-0.3 * depth)
 
 
-class MultiheadSdpaDiff1(nn.Module):
+class MultiheadSdpaDiff4(nn.Module):
     """
-    DiffAttn implemented with SDPA Attention, using the original intended attention passes
-    @ https://github.com/microsoft/unilm/blob/master/Diff-Transformer/multihead_flashdiff_2.py
+    DiffAttn implemented with SDPA Attention, using one attention pass based on
+    @ https://github.com/microsoft/unilm/pull/1633#issuecomment-2407941437
+
+    Credit to [MarktHart](https://github.com/MarktHart)
     """
     def __init__(
         self,
@@ -86,30 +85,19 @@ class MultiheadSdpaDiff1(nn.Module):
             q = apply_rotary_emb(q, *rel_pos, interleaved=True)
             k = apply_rotary_emb(k, *rel_pos, interleaved=True)
 
-        k = repeat_kv(k, self.n_rep)
-        v = repeat_kv(v, self.n_rep)
-
-        q = q.reshape(bsz, tgt_len, self.num_heads, 2, self.head_dim)
-        k = k.reshape(bsz, src_len, self.num_heads, 2, self.head_dim)
-        v = v.reshape(bsz, src_len, self.num_heads, 2, self.head_dim)
-
-        # [bsz, num_heads, seq_len, head_dim]
-        q1, q2 = shape_for_partial_sdpa(q, 0), shape_for_partial_sdpa(q, 1)
-        k1, k2 = shape_for_partial_sdpa(k, 0), shape_for_partial_sdpa(k, 1)
-        v1, v2 = shape_for_partial_sdpa(v, 0), shape_for_partial_sdpa(v, 1)
+        q = q.transpose(1, 2).contiguous()
+        k = repeat_kv(k, n_rep=self.n_rep).transpose(1, 2).contiguous()
+        v = repeat_kv(v, n_rep=self.n_rep*2).transpose(1, 2).contiguous()
 
         if attn_mask is not None:
             attn_mask = attn_mask[:, :, :, : src_len.shape[-2]]
         is_causal = True if attn_mask is None and tgt_len > 1 else False
 
-        # base attention passes as done with flash attn in the original implementation
-        attn11 = sdpa_attn_function(q1, k1, v1, attn_mask=attn_mask, is_causal=is_causal)
-        attn12 = sdpa_attn_function(q1, k1, v2, attn_mask=attn_mask, is_causal=is_causal)
-        attn1 = torch.cat([attn11, attn12], dim=-1)
-
-        attn21 = sdpa_attn_function(q2, k2, v1, attn_mask=attn_mask, is_causal=is_causal)
-        attn22 = sdpa_attn_function(q2, k2, v2, attn_mask=attn_mask, is_causal=is_causal)
-        attn2 = torch.cat([attn21, attn22], dim=-1)
+        # utilizes cyclic pattern of head calculation
+        attn_weights = sdpa_attn_function(query=q, key=k, value=v, attn_mask=attn_mask, is_causal=is_causal)
+        every_other_mask = torch.arange(attn_weights.size(1)) % 2 == 0
+        attn1 = attn_weights[:, every_other_mask, :, :]
+        attn2 = attn_weights[:, ~every_other_mask, :, :]
 
         lambda_1 = torch.exp(torch.sum(self.lambda_q1 * self.lambda_k1, dim=-1).float()).type_as(q)
         lambda_2 = torch.exp(torch.sum(self.lambda_q2 * self.lambda_k2, dim=-1).float()).type_as(q)

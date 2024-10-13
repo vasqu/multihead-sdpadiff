@@ -1,7 +1,7 @@
 # Differential Transformer with PyTorch Scaled Dot Product Attention
 
 ## Introduction
-Another two implementations for the Differential Transformer paper [[1]](#citation) using PyTorch's
+A set of implementations for the Differential Transformer paper [[1]](#citation) using PyTorch's
 [Scaled Dot Product Attention](https://pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html) instead
 of the provided implementations [over here](https://github.com/microsoft/unilm/tree/master/Diff-Transformer): 
 - Basic manual PyTorch
@@ -9,14 +9,19 @@ of the provided implementations [over here](https://github.com/microsoft/unilm/t
   - Custom kernel to handle differing `head_dim` more efficiently
   - Original kernel that is more optimized on same `head_dim`
 
-This implementation has two variations as I explored:
+This implementation has four variations as of now:
 - Following the original Flash Attention 2 implementation more closely
 - Following the custom Flash Attention 2 implementation more closely
-- One forward pass to the attention calculations (transferable to Flash Attention 2 implementation)
+- One forward pass to the attention calculations (transferable to original Flash Attention 2 implementation)
+- One forward pass to the attention calculations based on [[2]](#citation) (utilizing SDPA different `head_dim` capability)
 
 Note:
 - RoPE is optional as I only cared about equivalency first and foremost
-- Needs external proper handling of RoPE and Attention Masks 
+- Needs external proper handling of RoPE and Attention Masks
+- It really needs benchmarks to see what is working better especially regarding both 
+one pass versions 
+  - Same `head_dim`, more `num_heads` but concatenating and chunking/unbinding
+  - Different `head_dim`, less `num_heads` but possibly less utilization on Flash Attention 2
 
 
 ## Usage
@@ -25,7 +30,8 @@ import torch
 
 from multihead_sdpadiff_1 import MultiheadSdpaDiff1  # multiple attn passes
 from multihead_sdpadiff_2 import MultiheadSdpaDiff2  # two attn passes
-from multihead_sdpadiff_3 import MultiheadSdpaDiff3  # one attn pass
+from multihead_sdpadiff_3 import MultiheadSdpaDiff3  # one attn pass (v1)
+from multihead_sdpadiff_4 import MultiheadSdpaDiff4  # one attn pass (v2)
 
 # some shape values
 bsz = 2
@@ -40,7 +46,8 @@ x = torch.randn(size=(bsz, seq_len, embed_dim))
 # choose an implementation
 #sdpa_mha_diff = MultiheadSdpaDiff1(embed_dim, depth, num_heads, num_heads)
 #sdpa_mha_diff = MultiheadSdpaDiff2(embed_dim, depth, num_heads, num_heads)
-sdpa_mha_diff = MultiheadSdpaDiff3(embed_dim, depth, num_heads, num_heads)
+#sdpa_mha_diff = MultiheadSdpaDiff3(embed_dim, depth, num_heads, num_heads)
+sdpa_mha_diff = MultiheadSdpaDiff4(embed_dim, depth, num_heads, num_heads)
 
 # pass and check
 res = sdpa_mha_diff(x)
@@ -68,3 +75,5 @@ assert res.shape == x.shape
       url={https://arxiv.org/abs/2410.05258}, 
 }
 ```
+
+[2] Thanks for [MarktHart](https://github.com/MarktHart) for providing another [version](https://github.com/microsoft/unilm/pull/1633#issuecomment-2407941437) which might be the most optimized one

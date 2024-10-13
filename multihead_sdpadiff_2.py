@@ -79,7 +79,7 @@ class MultiheadSdpaDiff2(nn.Module):
 
         q = q.view(bsz, tgt_len, self.num_heads*2, self.head_dim)
         k = k.view(bsz, src_len, self.num_kv_heads*2, self.head_dim)
-        v = v.view(bsz, src_len, self.num_kv_heads*2, self.head_dim)
+        v = v.view(bsz, src_len, self.num_kv_heads, self.head_dim*2)
 
         # optional RoPE
         if rel_pos:
@@ -97,7 +97,7 @@ class MultiheadSdpaDiff2(nn.Module):
         k1, k2 = shape_for_partial_sdpa(k, 0), shape_for_partial_sdpa(k, 1)
 
         # [bsz, num_heads, seq_len, head_dim*2]
-        v = v.reshape(bsz, src_len, self.num_heads, self.head_dim*2).transpose(1, 2).contiguous()
+        v = v.transpose(1, 2).contiguous()
 
         if attn_mask is not None:
             attn_mask = attn_mask[:, :, :, : src_len.shape[-2]]

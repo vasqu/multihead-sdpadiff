@@ -3,6 +3,7 @@ import torch
 from multihead_sdpadiff_1 import MultiheadSdpaDiff1
 from multihead_sdpadiff_2 import MultiheadSdpaDiff2
 from multihead_sdpadiff_3 import MultiheadSdpaDiff3
+from multihead_sdpadiff_4 import MultiheadSdpaDiff4
 
 
 def clone_params(mha_1, mha_2):
@@ -32,13 +33,17 @@ x = torch.randn(size=(bsz, seq_len, embed_dim))
 mha_1 = MultiheadSdpaDiff1(embed_dim, depth, num_heads, num_heads // 2)
 mha_2 = MultiheadSdpaDiff2(embed_dim, depth, num_heads, num_heads // 2)
 mha_3 = MultiheadSdpaDiff3(embed_dim, depth, num_heads, num_heads // 2)
+mha_4 = MultiheadSdpaDiff4(embed_dim, depth, num_heads, num_heads // 2)
 
 clone_params(mha_1, mha_2)
 clone_params(mha_1, mha_3)
+clone_params(mha_1, mha_4)
 
 res_1 = mha_1(x)
 res_2 = mha_2(x)
 res_3 = mha_3(x)
+res_4 = mha_4(x)
 
 print(torch.allclose(res_1, res_2, atol=1e-5))
 print(torch.allclose(res_1, res_3, atol=1e-5))
+print(torch.allclose(res_1, res_4, atol=1e-5))

@@ -105,7 +105,7 @@ class MultiheadSdpaDiff3(nn.Module):
 
         q = q.view(bsz, tgt_len, self.num_heads*2, self.head_dim)
         k = k.view(bsz, src_len, self.num_kv_heads*2, self.head_dim)
-        v = v.view(bsz, src_len, self.num_kv_heads*2, self.head_dim)
+        v = v.view(bsz, src_len, self.num_kv_heads, self.head_dim*2)
 
         # optional RoPE
         if rel_pos:
