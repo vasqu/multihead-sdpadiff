@@ -12,7 +12,7 @@ def init_method(tensor, **kwargs):
     nn.init.kaiming_uniform_(tensor, a=math.sqrt(5))
 
 def repeat_kv(x: torch.Tensor, n_rep: int) -> torch.Tensor:
-    """torch.repeat_interleave(x, dim=1, repeats=n_rep)"""
+    """torch.repeat_interleave(x, dim=2, repeats=n_rep)"""
     bsz, seq_len, n_kv_heads, head_dim = x.shape
     if n_rep == 1:
         return x
