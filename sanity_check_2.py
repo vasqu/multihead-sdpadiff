@@ -7,6 +7,7 @@ from multihead_sdpadiff_2 import MultiheadSdpaDiff2
 # some shape values
 bsz = 2
 seq_len = 3
+depth = 12
 embed_dim = 768
 num_heads = 12
 
@@ -14,8 +15,8 @@ num_heads = 12
 x = torch.randn(size=(bsz, seq_len, embed_dim))
 
 # using both implementations and comparing them with each other
-mha_1 = MultiheadSdpaDiff1(embed_dim, 12, num_heads, num_heads)
-mha_2 = MultiheadSdpaDiff2(embed_dim, 12, num_heads, num_heads)
+mha_1 = MultiheadSdpaDiff1(embed_dim, depth, num_heads, num_heads)
+mha_2 = MultiheadSdpaDiff2(embed_dim, depth, num_heads, num_heads)
 
 mha_2.q_proj = mha_1.q_proj
 mha_2.k_proj = mha_1.k_proj

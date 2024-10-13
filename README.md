@@ -28,6 +28,7 @@ from multihead_sdpadiff_2 import MultiheadSdpaDiff2  # one attn pass
 # some shape values
 bsz = 2
 seq_len = 3
+depth = 12
 embed_dim = 768
 num_heads = 12  # this will be set to half as we double them for the diff 
 
@@ -35,8 +36,8 @@ num_heads = 12  # this will be set to half as we double them for the diff
 x = torch.randn(size=(bsz, seq_len, embed_dim))
 
 # choose an implementation
-#sdpa_mha_diff = MultiheadSdpaDiff1(embed_dim, 12, num_heads, num_heads)
-sdpa_mha_diff = MultiheadSdpaDiff2(embed_dim, 12, num_heads, num_heads)
+#sdpa_mha_diff = MultiheadSdpaDiff1(embed_dim, depth, num_heads, num_heads)
+sdpa_mha_diff = MultiheadSdpaDiff2(embed_dim, depth, num_heads, num_heads)
 
 # pass and check
 res = sdpa_mha_diff(x)
